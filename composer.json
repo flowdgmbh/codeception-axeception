@@ -1,6 +1,6 @@
 {
     "name": "flowd/axeception",
-    "description": "Codeception module for reporting axe messages",
+    "description": "Automated axe-core accessibility testing for Codeception with per-validation and per-selector expectations to catch regressions",
     "homepage": "https://flowd.de",
     "license": "MIT",
     "type": "library",
@@ -23,7 +23,8 @@
         }
     ],
     "require": {
-        "php": "^8.3"
+        "php": "^8.3",
+        "codeception/codeception": "^5"
     },
     "autoload": {
         "classmap": [
