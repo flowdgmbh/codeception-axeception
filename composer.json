@@ -1,0 +1,33 @@
+{
+    "name": "flowd/axeception",
+    "description": "Codeception module for reporting axe messages",
+    "homepage": "https://flowd.de",
+    "license": "MIT",
+    "type": "library",
+    "version": "1.0.0",
+    "keywords": [
+        "codeception"
+    ],
+    "authors": [
+        {
+            "name": "Christian Wurmbach",
+            "email": "christian.wurmbach@flowd.de",
+            "role": "Developer",
+            "homepage": "https://flowd.de"
+        },
+        {
+            "name": "Sascha Egerer",
+            "email": "sascha.egerer@flowd.de",
+            "role": "Developer",
+            "homepage": "https://flowd.de"
+        }
+    ],
+    "require": {
+        "php": "^8.3"
+    },
+    "autoload": {
+        "classmap": [
+            "src/"
+        ]
+    }
+}
