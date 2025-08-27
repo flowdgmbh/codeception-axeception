@@ -118,6 +118,9 @@ class AccessibilityCest
 }
 ```
 
+## Example Output
+![example output](src/assets/example-output.png)
+
 ## Troubleshooting
 
 ### WebDriver Module Not Loaded
