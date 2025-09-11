@@ -4,7 +4,7 @@
     "homepage": "https://flowd.de",
     "license": "MIT",
     "type": "library",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "keywords": [
         "codeception"
     ],
@@ -24,7 +24,8 @@
     ],
     "require": {
         "php": "^8.3",
-        "codeception/codeception": "^5"
+        "codeception/codeception": "^5",
+        "twig/twig": "^3.10"
     },
     "autoload": {
         "classmap": [

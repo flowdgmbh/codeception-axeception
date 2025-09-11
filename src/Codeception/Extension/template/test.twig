@@ -1,0 +1,119 @@
+<a id="{{ test.anchorId }}"></a>
+<h2>Test: {{ test.name }}</h2>
+
+<div class="summarySection">
+    {% if test.url %}
+    <div class="summary">
+        Page URL:
+        <a href="{{ test.url }}" target="_blank" class="card-link">{{ test.url }}</a>
+        <br />
+    </div>
+    {% endif %}
+    {% if test.failMessage %}
+    <div class="message">{{ test.failMessage }}</div>
+    {% endif %}
+</div>
+
+<h2>{{ test.violationsSummary|raw }}</h2>
+
+{% if test.violations|length > 0 %}
+<table class="table table-striped table-bordered">
+    <thead>
+        <tr>
+            <th style="width: 5%">#</th>
+            <th style="width: 45%">Description</th>
+            <th style="width: 15%">Axe rule ID</th>
+            <th style="width: 23%">WCAG</th>
+            <th style="width: 7%">Impact</th>
+            <th style="width: 5%">Count</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for v in test.violations %}
+        <tr>
+            <th scope="row"><a href="#{{ v.index }}" class="card-link">{{ v.index }}</a></th>
+            <td>{{ v.help }}</td>
+            <td>{{ v.id }}</td>
+            <td>{{ v.wcag }}</td>
+            <td>{{ v.impact }}</td>
+            <td>{{ v.nodes|length }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endif %}
+
+{% if test.violations|length > 0 %}
+<h3>Failed</h3>
+{% endif %}
+
+{% for d in test.violations %}
+<div class="card violationCard">
+    <div class="card-body">
+        <div class="violationCardLine">
+            <p class="card-title">
+                <a id="{{ d.index }}">{{ d.index }}.</a> {{ d.help }}
+            </p>
+            <a href="{{ d.helpUrl }}" target="_blank" class="card-link violationCardTitleItem learnMore">Learn more</a>
+        </div>
+        <div class="violationCardLine">
+            <p class="card-subtitle mb-2 text-muted">{{ d.id }}</p>
+            <p class="card-subtitle mb-2 text-muted violationCardTitleItem">{{ d.wcag }}</p>
+        </div>
+        <div class="violationCardLine">
+            <p class="card-text">{{ d.description }}</p>
+            <p class="card-subtitle mb-2 text-muted violationCardTitleItem">{{ d.impact }}</p>
+        </div>
+        <div class="violationCardLine">
+            <p class="card-subtitle mb-2 text-muted violationCardTitleItem">
+                Issue Tags:
+                {% for tag in d.tags %}
+                    <span class="badge bg-light text-dark"> {{ tag }} </span>
+                {% endfor %}
+            </p>
+        </div>
+        <div class="violationNode">
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th style="width: 2%">#</th>
+                        <th style="width: 49%">Issue Description</th>
+                        <th style="width: 49%">To solve this violation, you need to...</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for n in d.nodes %}
+                    <tr>
+                        <td>{{ n.index }}</td>
+                        <td>
+                            <p><strong>Element location</strong></p>
+                            <pre><code class="css text-wrap">{{ n.targetNodes }}</code></pre>
+                            <p><strong>Element source</strong></p>
+                            <pre><code class="html text-wrap">{{ n.html }}</code></pre>
+                        </td>
+                        <td>
+                            {% for fs in n.fixSummaries %}
+                            <div class="wrapBreakWord">
+                                <p>{{ fs.highlight }}</p>
+                                <ul class="text-muted">
+                                    {% for li in fs.list %}
+                                    <li>{{ li }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                            {% endfor %}
+                            {% if n.relatedNodesAny|length > 0 %}
+                            <p><strong>Related node:</strong></p>
+                            {% for rel in n.relatedNodesAny %}
+                                <pre><code class="css text-wrap">{{ rel }}</code></pre>
+                            {% endfor %}
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endfor %}

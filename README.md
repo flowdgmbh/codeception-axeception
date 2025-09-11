@@ -1,139 +1,131 @@
-# axeception
+# AxeCeption – axe-core accessibility testing for Codeception
 
-A Codeception module for automated accessibility testing using axe-core.
+A lightweight Codeception module + reporter to run axe-core in your browser tests and generate a consolidated HTML report (Twig-based) per test suite.
 
-## Overview
+- Module: runs axe-core in the current page via WebDriver, supports axe.configure and custom axe script URL.
+- Reporter: aggregates results from all tests and renders tests/_output/axeception-report.html using Twig templates.
 
-This package provides a Codeception module that integrates with axe-core to perform accessibility testing on web pages. It allows you to automatically check your web pages for accessibility issues during your acceptance tests.
+## Features
+- Execute axe.run() in real browser context (Codeception WebDriver)
+- Optional axe.configure(...) via YAML config (passed verbatim to axe)
+- Per-violation details (rule, impact, WCAG tags, nodes with target selectors and HTML snippets)
+- One consolidated HTML report with Table of Contents (anchors per test)
+- Custom output filename per test (via module config reportFilename)
+
+## Requirements
+- PHP 8.3+
+- Codeception 5+
+- Codeception WebDriver module (Chromedriver/Geckodriver etc.)
 
 ## Installation
-
-Install the package via Composer:
+This package is already required in your root composer.json as `flowd/axeception`. If adding manually:
 
 ```bash
 composer require flowd/axeception
 ```
 
-## Requirements
+The package depends on `twig/twig:^3.10`.
 
-- PHP 8.3 or higher
-- Codeception
-- WebDriver module for Codeception
-
-## Configuration
-
-Add the module to your Codeception suite configuration file (e.g., `acceptance.suite.yml`):
+## Enable in your suite
+Enable WebDriver and AxeCeption in your suite (e.g. tests/Acceptance.suite.yml):
 
 ```yaml
 modules:
-    enabled:
-        - WebDriver:
-            # WebDriver configuration...
-        - AxeCeption:
-            # Optional: specify a custom URL for axe.js
-            axeJavascript: '/axe.min.js'
+  enabled:
+    - WebDriver:
+    - Codeception\Module\AxeCeption:
+        # Optional: filename for the HTML report (relative to _output or absolute path)
+        reportFilename: 'axeception-report.html'
+
+        # Optional: URL or local path to axe-core script
+        # Defaults to https://unpkg.com/axe-core/axe.min.js
+        axeJavascript: '/axe.min.js'
+
+        # Optional: configuration passed to axe.configure({...}) before axe.run()
+        axeConfigure:
+          rules:
+            # example: disable a rule
+            - id: "aria-allowed-role"
+              enabled: false
+            # example: enable enhanced color contrast
+            - id: "color-contrast-enhanced"
+              enabled: true
 ```
 
-By default, the module uses the axe-core library from `https://unpkg.com/axe-core/axe.min.js`. You can specify a different URL or a local path if needed.
+Notes:
+- The module automatically injects axe-core into the current page and runs `axe.configure(...)` if `axeConfigure` is provided.
+- If `reportFilename` is set on the module, it will be used; an individual test can also override it (see below).
 
-## Usage
-
-### Basic Usage
-
-In your Codeception test, use the `seeNoAccessibilityIssues()` method to check for accessibility issues:
+## Using in tests (Cest)
+Call `seeNoAccessibilityIssues()` in your Cest scenarios after navigating to a page:
 
 ```php
 <?php
-// In your Cest file
-public function testAccessibility(AcceptanceTester $I)
-{
-    $I->amOnPage('/your-page');
-    $I->seeNoAccessibilityIssues([]);
-}
-```
-
-### Handling Known Violations
-
-You can declare known (expected) violations so the test only fails when the actual count deviates from what you expect. There are two modes:
-
-- Per rule (single integer): expect a total number of errors for a rule.
-- Per selector (map): expect an exact number per CSS selector for a rule.
-
-Do not mix both modes for the same rule.
-
-```php
-<?php
-public function testAccessibility(AcceptanceTester $I)
-{
-    $I->amOnPage('/your-page');
-    $I->seeNoAccessibilityIssues([
-        'aria-allowed-role' => [
-            '.b-dot-seperated-list' => 1,
-            '.footer'               => 2,
-        ],
-        'label'             => 1,
-    ]);
-}
-```
-
-The test will only fail if the number of violations for each rule doesn't match the expected count.
-
-## How It Works
-
-1. The module injects the axe-core JavaScript library into the page
-2. It runs axe.run() to analyze the page for accessibility issues
-3. It counts the number of violations for each rule
-4. It compares the actual violations with the expected violations
-5. It adds test steps to the Codeception output for each violation
-6. If there are unexpected violations, the test fails
-
-## Example
-
-Here's a complete example of how to use the module in a Codeception test:
-
-```php
-<?php
-namespace Tests\Acceptance;
-
-use Codeception\Example;
-use Tests\Support\FrontendUser;
-
 class AccessibilityCest
 {
-    /**
-     * Test homepage accessibility
-     */
-    public function homepageAccessibility(FrontendUser $I)
+    public function homepageHasNoCriticalViolations(AcceptanceTester $I): void
     {
         $I->amOnPage('/');
-        $I->seeNoAccessibilityIssues([
-            // Known issues that we're working on
-            'aria-allowed-role' => [
-                '.b-dot-seperated-list' => 1,
-                '.footer'               => 2,
-            ],
-            'label'             => 1,
-            ]);
+        $I->seeNoAccessibilityIssues();
     }
 }
 ```
 
-## Example Output
-![example output](src/assets/example-output.png)
+What happens:
+- The module checks that WebDriver is available.
+- It injects the axe-core script (from axeJavascript).
+- It applies `axeConfigure` (if configured).
+- It runs `axe.run()` and collects the `violations` array.
+- For each violation, it records a custom AxeStep in the scenario (used by the reporter) and then fails the test if at least one violation exists.
+
+## The HTML report
+The reporter runs at the end of the suite (RESULT_PRINT_AFTER) and produces a single HTML file.
+- Default output: `tests/_output/axeception-report.html`
+- Per-test override: in code, the module sets each AxeStep’s report path from `reportFilename`. If you set `reportFilename` in config, that name/path will be used. Absolute paths are respected; relative paths are resolved under `_output`.
+
+![Example of the consolidated AxeCeption HTML report](src/assets/example-output.png)
+<sub>Example: Consolidated report with table of contents and per-violation details</sub>
+
+Contents of the report:
+- Table of Contents with links (anchors) to each test section
+- For each test: summary table of violations and detailed sections per rule
+- For each node: target selectors, HTML snippet, and fix summary lines derived from axe’s failureSummary
+
+Templates (Twig):
+- `src/Codeception/Extension/template/page.twig`
+- `src/Codeception/Extension/template/test.twig`
+
+You can copy and adapt these to change the appearance/structure. The reporter renders with auto-escaping enabled.
+
+## Configuration reference
+- axeJavascript: string
+  - URL or local path to the axe-core script. Default: `https://unpkg.com/axe-core/axe.min.js`
+- axeConfigure: array
+  - Converted to JSON and passed to `axe.configure(...)` before `axe.run()`.
+  - Mirrors axe documentation: https://www.deque.com/axe/core-documentation/api-documentation/
+- reportFilename: string
+  - File name or absolute path for the report. If relative, it will be created under Codeception’s `_output` directory.
+
+## Customizing output per test
+You can override the report target per test by setting `reportFilename` in your Codeception config (applies to all tests). The reporter also respects a report path set on the recorded step. If you need programmatic control, expose a way to set a per-test path before calling `seeNoAccessibilityIssues()` and pass it into the module config (this repository already forwards `reportFilename` from config into recorded steps).
 
 ## Troubleshooting
+- WebDriver module not loaded
+  - Ensure WebDriver is enabled in your suite and appears before AxeCeption.
+- axe.run() did not return a violations array
+  - The module surfaces JavaScript loading/execution errors. Verify the axe script URL is reachable and there are no page JS errors.
+- No results in the report
+  - The reporter only renders tests that produced AxeStep entries (i.e., tests that called `seeNoAccessibilityIssues()` and reached axe.run()).
+- Anchors/TOC
+  - Anchors are derived from test names. If your test names contain special characters, they are normalized to generate stable IDs.
 
-### WebDriver Module Not Loaded
+## Development notes
+- Namespaces
+  - Module: `Codeception\Module\AxeCeption`
+  - Reporter: `Codeception\Extension\AxeCeptionReporter`
+  - Step: `Codeception\Step\AxeStep`
+- Templates live under `src/Codeception/Extension/template/`.
+- Twig is initialized without cache for simplicity; you can enable caching by providing a writable directory in the reporter.
 
-If you see the error "WebDriver module not loaded", make sure:
-
-1. The WebDriver module is enabled in your suite configuration
-2. The WebDriver module is listed before the AxeCeption module
-
-### Invalid Data Error
-
-If you see "Axe returned invalid data", check:
-
-1. The page is fully loaded before running the accessibility test
-2. There are no JavaScript errors on the page
-3. The axe-core library URL is accessible
+## License
+MIT
