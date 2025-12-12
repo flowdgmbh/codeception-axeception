@@ -50,8 +50,11 @@ class AxeCeption extends Module
      * Preconditions:
      * - WebDriver module must be enabled; otherwise the test is skipped.
      * - Method is intended to be used inside a Cest scenario.
+     * 
+     * @param array<mixed> $axeRunConfiguration Axe-Core.run() Configuration options
+     * @param array<mixed> $axeConfiguration Axe-Core Configuration options
      */
-    public function seeNoAccessibilityIssues(): void
+    public function seeNoAccessibilityIssues(array $axeRunConfiguration = [], array $axeConfiguration = []): void
     {
         // Without WebDriver (e.g., PhpBrowser mode) we cannot run axe.
         if (!$this->hasModule('WebDriver')) {
@@ -69,7 +72,7 @@ class AxeCeption extends Module
         assert($webDriver instanceof WebDriver, 'WebDriver module not loaded');
 
         try {
-            $violations = $this->getViolations($webDriver);
+            $violations = $this->getViolations($webDriver, $axeRunConfiguration, $axeConfiguration);
         } catch (\Exception $e) {
             // Any error from JavaScript execution or return handling -> fail the test.
             $this->fail($e->getMessage());
@@ -115,22 +118,30 @@ class AxeCeption extends Module
      * Injects axe-core, applies optional configuration, runs axe, and returns violations.
      *
      * @param WebDriver $webDriver Codeception WebDriver module instance
+     * @param array<mixed> $axeRunConfiguration Axe-Core.run() Configuration options
+     * @param array<mixed> $axeConfiguration Axe-Core Configuration options
      * @return array<int, array<string, mixed>> List of axe violations as arrays (JSON from the browser)
      * @throws \Exception when axe could not be executed or returned invalid data
      */
-    private function getViolations(WebDriver $webDriver): array
+    private function getViolations(WebDriver $webDriver, array $axeRunConfiguration, array $axeConfiguration): array
     {
         // Configurable source for axe-core; double quotes are stripped to simplify injection into the script tag.
         // You can override this via module config: axeJavascript: "https://.../axe.min.js"
         $javascript = str_replace('"', '', $this->config['axeJavascript'] ?? 'https://unpkg.com/axe-core/axe.min.js');
 
         // Optional: pass axe.configure(...) options from module config (axeConfigure: { rules: { ... } })
-        $axeConfiguration = $this->config['axeConfigure'] ?? null;
+        $axeConfiguration = $this->arrayMergeRecursiveOverwrite($this->config['axeConfigure'] ?? [], $axeConfiguration);
         $configureJs = '';
         if (is_array($axeConfiguration)) {
             $json = json_encode($axeConfiguration, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
             // This line will be interpolated into JS below right before axe.run()
             $configureJs = "axe.configure($json);";
+        }
+
+        $runConfigJavaScriptObject = '';
+        if (is_array($axeRunConfiguration)) {
+            // This line will be interpolated into JS below right before axe.run()
+            $runConfigJavaScriptObject = json_encode($axeRunConfiguration, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
         }
 
         $violations =  $webDriver->executeJS(
@@ -139,7 +150,7 @@ class AxeCeption extends Module
                 const script = document.createElement("script");
                 script.onload = () => {
                     $configureJs
-                    axe.run()
+                    axe.run($runConfigJavaScriptObject)
                         .then(results => {
                             if (results.violations.length) {
                                 results.violations.forEach((violation) => {
@@ -170,5 +181,26 @@ class AxeCeption extends Module
         }
 
         return $violations;
+    }
+
+    private function arrayMergeRecursiveOverwrite(array $array1, array $array2): array
+    {
+        foreach ($array2 as $key => $value) {
+
+            // Key entfernen wenn "__unset__"
+            if ($value === "__unset__") {
+                unset($array1[$key]);
+                continue;
+            }
+
+            // Rekursiv mergen, wenn beide Arrays sind
+            if (array_key_exists($key, $array1) && is_array($value) && is_array($array1[$key])) {
+                $array1[$key] = array_merge_recursive_overwrite($array1[$key], $value);
+            } else {
+                $array1[$key] = $value;
+            }
+        }
+
+        return $array1;
     }
 }
