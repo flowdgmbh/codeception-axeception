@@ -18,8 +18,6 @@ A lightweight Codeception module + reporter to run axe-core in your browser test
 - Codeception WebDriver module (Chromedriver/Geckodriver etc.)
 
 ## Installation
-This package is already required in your root composer.json as `flowd/axeception`. If adding manually:
-
 ```bash
 composer require flowd/axeception
 ```
