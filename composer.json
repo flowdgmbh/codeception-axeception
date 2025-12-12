@@ -23,7 +23,8 @@
     ],
     "require": {
         "php": "^8.3",
-        "codeception/codeception": "^5"
+        "codeception/codeception": "^5",
+        "twig/twig": "^3.10"
     },
     "autoload": {
         "classmap": [
