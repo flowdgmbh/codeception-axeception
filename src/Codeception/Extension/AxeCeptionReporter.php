@@ -90,6 +90,10 @@ class AxeCeptionReporter extends Extension
         $testsVm = [];
         $testIndex = 0;
 
+        if ($this->axeResults === []) {
+            return;
+        }
+
         foreach ($this->axeResults as $axeResult) {
             $test = $axeResult['test'];
             /** @var AxeStep[] $axeSteps */
